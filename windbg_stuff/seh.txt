@@ -1,0 +1,6 @@
+SEH Windbg Cheatsheet.
+
+!teb -> View TEB.
+dt _EXCEPTION_REGISTRATION_RECORD <ADDRESS> -> View exception record from TEB's ExceptionList.
+!exchain -> View the exception handling chain.
+bp ntdll!ExecuteHandler2 -> Set a breakpoint at Window's exception handler.
