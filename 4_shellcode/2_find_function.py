@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import ctypes, struct
 from keystone import *
 
