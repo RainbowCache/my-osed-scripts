@@ -1,0 +1,2 @@
+- Using rp++ to find rop chains in an executable.
+rp-win-x86.exe -f <EXE_FILENAME> -r 5 > <OUTPUT_FILE>

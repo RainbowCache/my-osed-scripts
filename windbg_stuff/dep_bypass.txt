@@ -1,0 +1,29 @@
+To bypass DEP, call VirtualAlloc via ROP chains.
+
+LPVOID WINAPI VirtualAlloc(
+   _In_opt_ LPVOID lpAddress,
+   _In_     SIZE_T dwSize,
+   _In_     DWORD  flAllocationType,
+   _In_     DWORD  flProtect
+ );
+
+lpAddress = Address of memory page.
+dwSize = A value between 0x1 and 0x1000 (AKA less than or equal to the size of a memory page.
+flAllocationType = Set this to MEM_COMMIT AKA 0x00001000
+flProtect = Set this to PAGE_EXECUTE_READWRITE AKA 0x00000040
+
+Example stack setup for calling VirtualAlloc:
+
+0d2be300 75f5ab90 -> KERNEL32!VirtualAllocStub
+0d2be304 0d2be488 -> Return address (Shellcode on the stack)
+0d2be308 0d2be488 -> lpAddress (Shellcode on the stack)
+0d2be30c 00000001 -> dwSize
+0d2be310 00001000 -> flAllocationType
+0d2be314 00000040 -> flProtect
+
+Step 1: Grab esp.
+Look for something like mov eax, esp.
+Look for something like push esp ; pop eax
+
+Step 2: Grab the location of VirtualAlloc.
+Look at the IAT entry in IDA for VirtualAlloc in an appropriate DLL.
