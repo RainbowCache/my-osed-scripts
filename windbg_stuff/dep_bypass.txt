@@ -28,7 +28,7 @@ Look for something like push esp ; pop eax
 Step 2: Grab the location of VirtualAlloc.
 Look at the IAT entry in IDA for VirtualAlloc in an appropriate DLL.
 
-DEP can also be bypassed with WriteProcessMemory.
+DEP can also be bypassed with WriteProcessMemory. Note that you'll probably need a custom ROP decoder for the shell code.
 BOOL WriteProcessMemory(
   HANDLE  hProcess,
   LPVOID  lpBaseAddress,
