@@ -1,0 +1,15 @@
+Win32 function SymGetSymFromName() can resolve memory addresses.
+You can find this by examining the imports of an image from Ida.
+
+If a service automatically restarts and the base address contains bad chars, crash the service!
+You can check for automatic restart with Procmon. Filter: operation contains Process.
+
+Finding the preferred base load address of a DLL in windbg:
+0:077> dd libeay32IBM019 + 3c L1
+031f003c  00000108
+0:077> dd libeay32IBM019 + 108 + 34 L1
+031f013c  10000000
+
+Use this to calculate offsets for rop chains. <absolute address> - <preferred base address>.
+
+Setting breakpoints example: bp libeay32IBM019+0x1fd8

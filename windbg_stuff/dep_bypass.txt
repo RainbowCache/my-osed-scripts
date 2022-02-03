@@ -27,3 +27,131 @@ Look for something like push esp ; pop eax
 
 Step 2: Grab the location of VirtualAlloc.
 Look at the IAT entry in IDA for VirtualAlloc in an appropriate DLL.
+
+DEP can also be bypassed with WriteProcessMemory.
+BOOL WriteProcessMemory(
+  HANDLE  hProcess,
+  LPVOID  lpBaseAddress,
+  LPCVOID lpBuffer,
+  SIZE_T  nSize,
+  SIZE_T  *lpNumberOfBytesWritten
+);
+
+hProcess = Process handle. Set to -1.
+lpBaseAddress = Absolute memory address in code we want to copy to. Must be page aligned. Page is padded with null
+    bytes. Find a code cave by searching for null bytes in code section in debugger. See: finding code caves.
+lpBuffer = Location on the stack (or heap) of our shellcode to copy from.
+nSize = Shellcode size.
+lpNumberOfBytesWritten = Set this to a writable address like one in the data section of the image. See: Finding data
+    section in image.
+
+Finding code caves:
+Find offset to PE header:
+0:077> dd libeay32IBM019 + 3c L1
+031f003c  00000108
+
+Find offset to code section:
+0:077> dd libeay32IBM019 + 108 + 2c L1
+031f0134  00001000
+
+Grab the base address of the code section:
+0:077> ? libeay32IBM019 + 1000
+Evaluate expression: 52367360 = 031f1000
+
+Get info about the code section and end address:
+0:077> !address 031f1000
+Usage:                  Image
+Base Address:           031f1000
+End Address:            03283000 <- BINGO!
+Region Size:            00092000 ( 584.000 kB)
+State:                  00001000          MEM_COMMIT
+Protect:                00000020          PAGE_EXECUTE_READ <- COOL!
+Type:                   01000000          MEM_IMAGE
+Allocation Base:        031f0000
+Allocation Protect:     00000080          PAGE_EXECUTE_WRITECOPY
+
+400 bytes should be enough for shell code. Check for code cave there:
+0:077> dd 03283000-400
+03282c00  00000000 00000000 00000000 00000000
+03282c10  00000000 00000000 00000000 00000000
+03282c20  00000000 00000000 00000000 00000000
+03282c30  00000000 00000000 00000000 00000000
+03282c40  00000000 00000000 00000000 00000000
+03282c50  00000000 00000000 00000000 00000000
+03282c60  00000000 00000000 00000000 00000000
+03282c70  00000000 00000000 00000000 00000000
+
+Confirm:
+0:077> ? 03283000-400 - libeay32IBM019
+Evaluate expression: 601088 = 00092c00
+0:077> !address 03282c00
+Usage:                  Image
+Base Address:           031f1000
+End Address:            03283000
+Region Size:            00092000 ( 584.000 kB)
+State:                  00001000          MEM_COMMIT
+Protect:                00000020          PAGE_EXECUTE_READ
+Type:                   01000000          MEM_IMAGE
+Allocation Base:        031f0000
+Allocation Protect:     00000080          PAGE_EXECUTE_WRITECOPY
+
+Finding data section in image:
+Get image info:
+0:077> !dh -a libeay32IBM019
+File Type: DLL
+FILE HEADER VALUES
+     14C machine (i386)
+       6 number of sections
+49EC08E6 time date stamp Sun Apr 19 22:32:22 2009
+       0 file pointer to symbol table
+       0 number of symbols
+      E0 size of optional header
+    2102 characteristics
+            Executable
+            32 bit word machine
+            DLL
+...
+SECTION HEADER #4
+   .data name
+    F018 virtual size <- BINGO
+   D5000 virtual address <- BINGO
+    CA00 size of raw data
+   D2000 file pointer to raw data
+       0 file pointer to relocation table
+       0 file pointer to line numbers
+       0 number of relocations
+       0 number of line numbers
+C0000040 flags
+         Initialized Data
+         (no align specified)
+         Read Write <- COOL!
+
+Find absolute address 4 bytes after end of section:
+0:077> ? libeay32IBM019 + d5000 + f018  + 4
+Evaluate expression: 53297180 = 032d401c
+
+See what's there:
+0:077> dd 032d401c
+032d401c  00000000 00000000 00000000 00000000
+032d402c  00000000 00000000 00000000 00000000
+032d403c  00000000 00000000 00000000 00000000
+032d404c  00000000 00000000 00000000 00000000
+032d405c  00000000 00000000 00000000 00000000
+032d406c  00000000 00000000 00000000 00000000
+032d407c  00000000 00000000 00000000 00000000
+032d408c  00000000 00000000 00000000 00000000
+
+Check protections:
+0:077> !vprot 032d401c
+BaseAddress:       032d4000
+AllocationBase:    031f0000
+AllocationProtect: 00000080  PAGE_EXECUTE_WRITECOPY
+RegionSize:        00001000
+State:             00001000  MEM_COMMIT
+Protect:           00000004  PAGE_READWRITE <- YAY!
+Type:              01000000  MEM_IMAGE
+
+Get offset from base:
+0:077> ? 032d401c - libeay32IBM019
+Evaluate expression: 933916 = 000e401c
+
