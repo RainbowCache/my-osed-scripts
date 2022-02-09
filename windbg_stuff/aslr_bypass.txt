@@ -13,3 +13,5 @@ Finding the preferred base load address of a DLL in windbg:
 Use this to calculate offsets for rop chains. <absolute address> - <preferred base address>.
 
 Setting breakpoints example: bp libeay32IBM019+0x1fd8
+
+dds <address> <- See module each value points to.
